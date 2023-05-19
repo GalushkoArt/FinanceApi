@@ -5,8 +5,9 @@ Simple REST API Finance Server
 
 - GO 1.20.4
 - Postgres 15.3
-- GIN
+- Fiber
 - SimpleCache
+- Swagger
 
 **Reference data**: TwelveData
 
@@ -30,5 +31,5 @@ Simple REST API Finance Server
 ## To run:
 
 ```shell
-go run cmd/main.go
+go run cmd/app/main.go
 ```

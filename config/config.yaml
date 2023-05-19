@@ -14,8 +14,10 @@ logs:
   level: "DEBUG"
   path: "logs.txt"
 server:
+  prefork: false
+  environment: "Dev"
   port: "8090"
-  readTimeoutSec: 10
-  writeTimeoutSec: 60
+  readTimeout: "10s"
+  writeTimeout: "60s"
 cache:
   symbolTtl: "1h"

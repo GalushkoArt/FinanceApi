@@ -1,0 +1,204 @@
+definitions:
+  handler.Error:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  model.Exchange:
+    properties:
+      country:
+        type: string
+      mic_code:
+        type: string
+      name:
+        type: string
+      timezone:
+        type: string
+    type: object
+  model.Price:
+    properties:
+      close:
+        type: string
+      date:
+        type: string
+      high:
+        type: string
+      low:
+        type: string
+      open:
+        type: string
+      volume:
+        type: string
+    type: object
+  model.Symbol:
+    properties:
+      currency:
+        type: string
+      currency_base:
+        type: string
+      currency_quote:
+        type: string
+      exchanges:
+        items:
+          $ref: '#/definitions/model.Exchange'
+        type: array
+      name:
+        type: string
+      symbol:
+        type: string
+      type:
+        type: string
+      values:
+        items:
+          $ref: '#/definitions/model.Price'
+        type: array
+    required:
+      - symbol
+    type: object
+  model.UpdateSymbol:
+    properties:
+      currency:
+        type: string
+      currency_base:
+        type: string
+      currency_quote:
+        type: string
+      exchanges:
+        items:
+          $ref: '#/definitions/model.Exchange'
+        type: array
+      name:
+        type: string
+      symbol:
+        type: string
+      type:
+        type: string
+      values:
+        items:
+          $ref: '#/definitions/model.Price'
+        type: array
+    required:
+      - symbol
+    type: object
+info:
+  contact: { }
+  description: Finance REST API for equities, fx and crypto rates.
+  title: Finance API
+  version: "1.0"
+paths:
+  /api/v1/symbols:
+    get:
+      description: Get all available latest symbols
+      operationId: get-symbols
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: Successful response
+          schema:
+            items:
+              $ref: '#/definitions/model.Symbol'
+            type: array
+        "404":
+          description: Data not found
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: GetSymbols
+    post:
+      consumes:
+        - application/json
+      description: Add new symbol data
+      operationId: add-symbols
+      parameters:
+        - description: New symbol data
+          in: body
+          name: input
+          required: true
+          schema:
+            $ref: '#/definitions/model.Symbol'
+      responses:
+        "204":
+          description: Add successfully
+        "400":
+          description: Client request errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: AddSymbols
+    put:
+      consumes:
+        - application/json
+      description: Update symbol data
+      operationId: update-symbols
+      parameters:
+        - description: Update symbol data
+          in: body
+          name: input
+          required: true
+          schema:
+            $ref: '#/definitions/model.UpdateSymbol'
+      responses:
+        "204":
+          description: Add successfully
+        "400":
+          description: Client request errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: UpdateSymbols
+  /api/v1/symbols/{symbol}:
+    delete:
+      description: Delete data for symbol
+      operationId: delete-symbol
+      produces:
+        - application/json
+      responses:
+        "204":
+          description: Deleted successfully
+        "400":
+          description: Client request errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Client request errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server errors
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: DeleteSymbol
+    get:
+      description: Get latest data for particular symbol
+      operationId: get-symbol
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: Successful response
+          schema:
+            items:
+              $ref: '#/definitions/model.Symbol'
+            type: array
+        "400":
+          description: Client request error
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "404":
+          description: Client request error
+          schema:
+            $ref: '#/definitions/handler.Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.Error'
+      summary: GetSymbol
+swagger: "2.0"

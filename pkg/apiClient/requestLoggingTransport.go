@@ -1,8 +1,9 @@
 package apiClient
 
 import (
-	"FinanceApi/pkg/log"
+	"FinanceApi/pkg/utils"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 )
@@ -29,6 +30,6 @@ func (t *RequestLoggingTransport) RoundTrip(r *http.Request) (*http.Response, er
 			logString += " Body: " + string(body)
 		}
 	}
-	log.Info(logString)
+	utils.LogRequest(r.Context(), log.Info()).Str("from", "apiClientRequestLogger").Msg(logString)
 	return t.next.RoundTrip(r)
 }

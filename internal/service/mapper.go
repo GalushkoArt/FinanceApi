@@ -1,8 +1,8 @@
 package service
 
 import (
+	"FinanceApi/internal/model"
 	"FinanceApi/pkg/apiClient"
-	"FinanceApi/pkg/model"
 )
 
 func timeSeriesToModel(timeSeries apiClient.TimeSeries) model.Symbol {
