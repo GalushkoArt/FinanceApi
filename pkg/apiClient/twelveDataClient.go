@@ -57,7 +57,7 @@ func (c *TwelveDataClient) GetHistoricDataForSymbol(ctx context.Context, symbol 
 	}
 	if response.StatusCode != 200 {
 		utils.LogRequest(ctx, log.Error()).
-			Str("from", "TwelveDataClient").
+			Str("from", "twelveDataClient").
 			Str("response", string(responseBody)).
 			Int("response_code", response.StatusCode).
 			Msg("Unknown status code from TwelveData API")
@@ -69,7 +69,7 @@ func (c *TwelveDataClient) GetHistoricDataForSymbol(ctx context.Context, symbol 
 	}
 	if results.Status == "error" {
 		utils.LogRequest(ctx, log.Error()).
-			Str("from", "TwelveDataClient").
+			Str("from", "twelveDataClient").
 			Interface("response", results).
 			Int("response_code", response.StatusCode).
 			Msg("Error received from TwelveData API")

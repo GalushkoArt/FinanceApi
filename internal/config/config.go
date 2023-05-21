@@ -15,6 +15,7 @@ type Config struct {
 		Name     string `yaml:"name" env:"DB_NAME" env-default:"finance_app"`
 		User     string `yaml:"user" env:"DB_USER" env-default:"finance_user"`
 		Password string `yaml:"password" env:"DB_PASSWORD"`
+		Salt     string `yaml:"salt" env:"DB_SALT"`
 	} `yaml:"database"`
 	API struct {
 		TwelveData struct {
@@ -38,6 +39,11 @@ type Config struct {
 	Cache struct {
 		SymbolTTL time.Duration `yaml:"symbolTtl" env:"CACHE_SYMBOL_TTL" env-default:"1h"`
 	} `yaml:"cache"`
+	JWT struct {
+		HMACSecret         string        `yaml:"hmac_secret" env:"JWT_HMAC_SECRET"`
+		ExpiryTimeout      time.Duration `yaml:"expiry_timeout" env:"JWT_EXPIRY_TIMEOUT" env-default:"15m"`
+		RefreshTimeoutDays int           `yaml:"refresh_timeout_days" env:"JWT_REFRESH_TIMEOUT_DAYS" env-default:"30"`
+	} `yaml:"jwt"`
 }
 
 var Conf Config

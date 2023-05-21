@@ -3,12 +3,10 @@ database:
   host: "localhost"
   name: "finance_app"
   user: "finance_user"
-  password: "YOUR_DB_PASSWORD"
 api:
   twelveData:
     host: "https://api.twelvedata.com"
     timeout: "2m"
-    apiKey: "YOUR_API_KEY"
     rateLimit: 8
 logs:
   level: "DEBUG"
@@ -21,3 +19,6 @@ server:
   writeTimeout: "60s"
 cache:
   symbolTtl: "1h"
+jwt:
+  expiry_timeout: "15m"
+  refresh_timeout_days: 30

@@ -42,6 +42,10 @@ const (
 func (r *symbolRepositoryPostgres) Add(ctx context.Context, newSymbol model.Symbol) error {
 	var stored symbol
 	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		srLog(ctx, log.Error()).Err(err).Msg("Failed to begin transaction")
+		return err
+	}
 	err = tx.Get(&stored, symbolQuery, newSymbol.Symbol)
 	srLog(ctx, log.Debug()).Msgf("Searching for %s symbol!", newSymbol.Symbol)
 	if err != nil {
@@ -52,7 +56,7 @@ func (r *symbolRepositoryPostgres) Add(ctx context.Context, newSymbol model.Symb
 		srLog(ctx, log.Info()).Msgf("New symbol %s reference not found! Trying to insert received values", newSymbol.Symbol)
 		const symbolInsert = `INSERT INTO SYMBOL (symbol, name, type, currency, currency_base, currency_quote) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 		row := tx.QueryRow(symbolInsert, newSymbol.Symbol, newSymbol.Name, newSymbol.Type, newSymbol.Currency, newSymbol.CurrencyBase, newSymbol.CurrencyQuote)
-		if err := row.Scan(&stored.Id); err != nil {
+		if err := row.Scan(&stored.ID); err != nil {
 			utils.PanicOnError(tx.Rollback())
 			return err
 		}
@@ -68,16 +72,16 @@ func (r *symbolRepositoryPostgres) Add(ctx context.Context, newSymbol model.Symb
 					return err
 				}
 				srLog(ctx, log.Info()).Msgf("New symbol exchange %s reference not found Trying to insert received values!", exchange.Name)
-				const exchangeInsert = `INSERT INTO EXCHANGE (name, code, country, timezone) VALUES ($1, $2, $3, $4 )RETURNING id`
+				const exchangeInsert = `INSERT INTO EXCHANGE (name, code, country, timezone) VALUES ($1, $2, $3, $4) RETURNING id`
 				row := tx.QueryRow(exchangeInsert, exchange.Name, exchange.MicCode, exchange.Country, exchange.Timezone)
-				if err := row.Scan(&storedExchange.Id); err != nil {
+				if err := row.Scan(&storedExchange.ID); err != nil {
 					srLog(ctx, log.Warn()).Err(err).Msg("Fail on insert new exchange!")
 					utils.PanicOnError(tx.Rollback())
 					return err
 				}
 			}
 			srLog(ctx, log.Debug()).Msgf("Searching for %s symbol - %s exchange relation!", newSymbol.Symbol, exchange.Name)
-			_, err := tx.Exec(symbolExchangeInsert, stored.Id, storedExchange.Id)
+			_, err := tx.Exec(symbolExchangeInsert, stored.ID, storedExchange.ID)
 			if err != nil {
 				srLog(ctx, log.Warn()).Err(err).Msg("Fail on insert symbol exchange relation!")
 				utils.PanicOnError(tx.Rollback())
@@ -88,7 +92,7 @@ func (r *symbolRepositoryPostgres) Add(ctx context.Context, newSymbol model.Symb
 	for _, price := range newSymbol.Values {
 		srLog(ctx, log.Debug()).Msgf("Inserting price %+v for %s", price, stored.Symbol)
 		const priceInsert = `INSERT INTO PRICE(SYMBOL_ID, DATE, OPEN, CLOSE, HIGH, LOW, VOLUME) VALUES ($1, $2, $3, $4, $5, $6, $7)`
-		_, err := tx.Exec(priceInsert, stored.Id, price.Date, price.Open, price.Close, price.High, price.Low, price.Volume)
+		_, err := tx.Exec(priceInsert, stored.ID, price.Date, price.Open, price.Close, price.High, price.Low, price.Volume)
 		if err != nil {
 			srLog(ctx, log.Warn()).Err(err).Msg("Fail on insert new price!")
 			utils.PanicOnError(tx.Rollback())
@@ -101,6 +105,10 @@ func (r *symbolRepositoryPostgres) Add(ctx context.Context, newSymbol model.Symb
 func (r *symbolRepositoryPostgres) Update(ctx context.Context, newSymbol model.UpdateSymbol) error {
 	var stored symbol
 	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		srLog(ctx, log.Error()).Err(err).Msg("Failed to begin transaction")
+		return err
+	}
 	srLog(ctx, log.Debug()).Msgf("Searching for %s symbol!", newSymbol.Symbol)
 	err = tx.Get(&stored, symbolQuery, newSymbol.Symbol)
 	if err != nil {
@@ -114,7 +122,7 @@ func (r *symbolRepositoryPostgres) Update(ctx context.Context, newSymbol model.U
 	srLog(ctx, log.Debug()).Msgf("Updating %s symbol!", newSymbol.Symbol)
 	updatedSymbol := updatedSymbol(stored, newSymbol)
 	const symbolUpdate = `update symbol set symbol = $1, name = $2, type = $3, currency = $4, currency_base = $5, currency_quote = $6 where id = $7`
-	_, err = tx.Exec(symbolUpdate, updatedSymbol.Symbol, updatedSymbol.Name, updatedSymbol.SymbolType, updatedSymbol.Currency, updatedSymbol.CurrencyBase, updatedSymbol.CurrencyQuote, stored.Id)
+	_, err = tx.Exec(symbolUpdate, updatedSymbol.Symbol, updatedSymbol.Name, updatedSymbol.SymbolType, updatedSymbol.Currency, updatedSymbol.CurrencyBase, updatedSymbol.CurrencyQuote, stored.ID)
 	if err != nil {
 		srLog(ctx, log.Info()).Err(err).Msgf("Cannot update %s symbol!", newSymbol.Symbol)
 		utils.PanicOnError(tx.Rollback())
@@ -129,8 +137,8 @@ func (r *symbolRepositoryPostgres) Update(ctx context.Context, newSymbol model.U
 				utils.PanicOnError(tx.Rollback())
 				return err
 			}
-			const exchangeUpdate = `UPDATE EXCHANGE name = $1, code = $2, country = $3, timezone = $4 where id = $5`
-			_, err := tx.Exec(exchangeUpdate, exchange.Name, exchange.MicCode, exchange.Country, exchange.Timezone, storedExchange.Id)
+			const exchangeUpdate = `UPDATE EXCHANGE SET name = $1, code = $2, country = $3, timezone = $4 where id = $5`
+			_, err := tx.Exec(exchangeUpdate, exchange.Name, exchange.MicCode, exchange.Country, exchange.Timezone, storedExchange.ID)
 			if err != nil {
 				srLog(ctx, log.Info()).Err(err).Msgf("Fail on update %s exchange!", exchange.Name)
 			}
@@ -139,16 +147,16 @@ func (r *symbolRepositoryPostgres) Update(ctx context.Context, newSymbol model.U
 	var storedPrice price
 	for _, price := range newSymbol.Values {
 		const priceQuery = `SELECT SYMBOL_ID, DATE, OPEN, CLOSE, HIGH, LOW, VOLUME FROM PRICE WHERE SYMBOL_ID = $1 AND DATE = $2`
-		err = tx.Get(&storedPrice, priceQuery, stored.Id, price.Date)
+		err = tx.Get(&storedPrice, priceQuery, stored.ID, price.Date)
 		if err != nil {
 			const priceInsert = `INSERT INTO PRICE(SYMBOL_ID, DATE, OPEN, CLOSE, HIGH, LOW, VOLUME) VALUES ($1, $2, $3, $4, $5, $6, $7)`
-			_, err := tx.Exec(priceInsert, stored.Id, price.Date, price.Open, price.Close, price.High, price.Low, price.Volume)
+			_, err := tx.Exec(priceInsert, stored.ID, price.Date, price.Open, price.Close, price.High, price.Low, price.Volume)
 			if err != nil {
 				srLog(ctx, log.Info()).Err(err).Msg("Fail on insert price!")
 			}
 		} else {
 			const priceUpdate = `UPDATE PRICE SET OPEN = $1, CLOSE = $2, HIGH = $3, LOW = $4, VOLUME = $5 WHERE SYMBOL_ID = $6 AND DATE = $7`
-			_, err := tx.Exec(priceUpdate, price.Open, price.Close, price.High, price.Low, price.Volume, stored.Id, price.Date)
+			_, err := tx.Exec(priceUpdate, price.Open, price.Close, price.High, price.Low, price.Volume, stored.ID, price.Date)
 			if err != nil {
 				srLog(ctx, log.Info()).Err(err).Msg("Fail on insert price!")
 			}

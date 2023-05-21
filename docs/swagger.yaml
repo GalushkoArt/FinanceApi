@@ -1,9 +1,20 @@
 definitions:
-  handler.Error:
+  handler.CommonResponse:
     properties:
+      authErrors:
+        items:
+          $ref: '#/definitions/model.AuthError'
+        type: array
       code:
         type: integer
       message:
+        type: string
+    type: object
+  model.AuthError:
+    properties:
+      field:
+        type: string
+      rule:
         type: string
     type: object
   model.Exchange:
@@ -30,6 +41,43 @@ definitions:
       open:
         type: string
       volume:
+        type: string
+    type: object
+  model.SignIn:
+    properties:
+      login:
+        maxLength: 255
+        minLength: 3
+        type: string
+      password:
+        maxLength: 32
+        minLength: 6
+        type: string
+    required:
+      - login
+      - password
+    type: object
+  model.SignUp:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      password:
+        maxLength: 32
+        minLength: 6
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+      - email
+      - password
+      - username
+    type: object
+  model.SuccessfulAuthentication:
+    properties:
+      token:
         type: string
     type: object
   model.Symbol:
@@ -101,11 +149,21 @@ paths:
             items:
               $ref: '#/definitions/model.Symbol'
             type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "404":
           description: Data not found
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+      security:
+        - ApiKeyAuth:
+            - client
+            - admin
       summary: GetSymbols
+      tags:
+        - Symbols
     post:
       consumes:
         - application/json
@@ -118,18 +176,32 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/model.Symbol'
+      produces:
+        - application/json
       responses:
-        "204":
+        "200":
           description: Add successfully
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "400":
           description: Client request errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "500":
           description: Internal server errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+      security:
+        - ApiKeyAuth:
+            - client
+            - admin
       summary: AddSymbols
+      tags:
+        - Symbols
     put:
       consumes:
         - application/json
@@ -142,18 +214,31 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/model.UpdateSymbol'
+      produces:
+        - application/json
       responses:
-        "204":
+        "200":
           description: Add successfully
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "400":
           description: Client request errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "500":
           description: Internal server errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+      security:
+        - ApiKeyAuth:
+            - admin
       summary: UpdateSymbols
+      tags:
+        - Symbols
   /api/v1/symbols/{symbol}:
     delete:
       description: Delete data for symbol
@@ -161,21 +246,32 @@ paths:
       produces:
         - application/json
       responses:
-        "204":
+        "200":
           description: Deleted successfully
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "400":
           description: Client request errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "404":
           description: Client request errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
         "500":
           description: Internal server errors
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+      security:
+        - ApiKeyAuth:
+            - admin
       summary: DeleteSymbol
+      tags:
+        - Symbols
     get:
       description: Get latest data for particular symbol
       operationId: get-symbol
@@ -191,14 +287,120 @@ paths:
         "400":
           description: Client request error
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
         "404":
           description: Client request error
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/handler.Error'
+            $ref: '#/definitions/handler.CommonResponse'
+      security:
+        - ApiKeyAuth:
+            - client
+            - admin
       summary: GetSymbol
+      tags:
+        - Symbols
+  /auth/refresh:
+    get:
+      description: Refresh auth token
+      operationId: refresh-token
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: Response with jwt token
+          schema:
+            $ref: '#/definitions/model.SuccessfulAuthentication'
+        "400":
+          description: Wrong refresh token
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+        "500":
+          description: Internal server errors
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+      summary: Refresh
+      tags:
+        - Auth
+  /auth/signin:
+    put:
+      consumes:
+        - application/json
+      description: Authenticate user
+      operationId: sign-in
+      parameters:
+        - description: Authentication user data
+          in: body
+          name: input
+          required: true
+          schema:
+            $ref: '#/definitions/model.SignIn'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: Response with jwt token
+          schema:
+            $ref: '#/definitions/model.SuccessfulAuthentication'
+        "400":
+          description: Wrong user data
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+        "401":
+          description: Wrong credentials
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+        "500":
+          description: Internal server errors
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+      summary: SignIn
+      tags:
+        - Auth
+  /auth/signup:
+    put:
+      consumes:
+        - application/json
+      description: Register new user
+      operationId: sign-up
+      parameters:
+        - description: New user data
+          in: body
+          name: input
+          required: true
+          schema:
+            $ref: '#/definitions/model.SignUp'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: New user created successfully
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+        "400":
+          description: Wrong user data
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+        "500":
+          description: Internal server errors
+          schema:
+            $ref: '#/definitions/handler.CommonResponse'
+      summary: SignUp
+      tags:
+        - Auth
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    scopes:
+      admin: ' Grants read and write access to resources'
+      client: ' Grants read access to resources'
+    type: apiKey
 swagger: "2.0"
