@@ -1,0 +1,309 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Finance REST API for equities, fx and crypto rates.",
+    "title": "Finance API",
+    "contact": {},
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/v1/symbols": {
+      "get": {
+        "description": "Get all available latest symbols",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "GetSymbols",
+        "operationId": "get-symbols",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/model.Symbol"
+              }
+            }
+          },
+          "404": {
+            "description": "Data not found",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Update symbol data",
+        "consumes": [
+          "application/json"
+        ],
+        "summary": "UpdateSymbols",
+        "operationId": "update-symbols",
+        "parameters": [
+          {
+            "description": "Update symbol data",
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/model.UpdateSymbol"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Add successfully"
+          },
+          "400": {
+            "description": "Client request errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          },
+          "500": {
+            "description": "Internal server errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Add new symbol data",
+        "consumes": [
+          "application/json"
+        ],
+        "summary": "AddSymbols",
+        "operationId": "add-symbols",
+        "parameters": [
+          {
+            "description": "New symbol data",
+            "name": "input",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/model.Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Add successfully"
+          },
+          "400": {
+            "description": "Client request errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          },
+          "500": {
+            "description": "Internal server errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/symbols/{symbol}": {
+      "get": {
+        "description": "Get latest data for particular symbol",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "GetSymbol",
+        "operationId": "get-symbol",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/model.Symbol"
+              }
+            }
+          },
+          "400": {
+            "description": "Client request error",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          },
+          "404": {
+            "description": "Client request error",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete data for symbol",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "DeleteSymbol",
+        "operationId": "delete-symbol",
+        "responses": {
+          "204": {
+            "description": "Deleted successfully"
+          },
+          "400": {
+            "description": "Client request errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          },
+          "404": {
+            "description": "Client request errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          },
+          "500": {
+            "description": "Internal server errors",
+            "schema": {
+              "$ref": "#/definitions/handler.Error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "handler.Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "model.Exchange": {
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string"
+        },
+        "mic_code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        }
+      }
+    },
+    "model.Price": {
+      "type": "object",
+      "properties": {
+        "close": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "high": {
+          "type": "string"
+        },
+        "low": {
+          "type": "string"
+        },
+        "open": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "string"
+        }
+      }
+    },
+    "model.Symbol": {
+      "type": "object",
+      "required": [
+        "symbol"
+      ],
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "currency_base": {
+          "type": "string"
+        },
+        "currency_quote": {
+          "type": "string"
+        },
+        "exchanges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/model.Exchange"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/model.Price"
+          }
+        }
+      }
+    },
+    "model.UpdateSymbol": {
+      "type": "object",
+      "required": [
+        "symbol"
+      ],
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "currency_base": {
+          "type": "string"
+        },
+        "currency_quote": {
+          "type": "string"
+        },
+        "exchanges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/model.Exchange"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/model.Price"
+          }
+        }
+      }
+    }
+  }
+}

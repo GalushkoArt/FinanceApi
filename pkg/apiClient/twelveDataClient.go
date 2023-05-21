@@ -1,13 +1,16 @@
 package apiClient
 
 import (
-	"FinanceApi/pkg/config"
+	"FinanceApi/internal/model"
+	"FinanceApi/pkg/utils"
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type TwelveDataClient struct {
@@ -16,14 +19,14 @@ type TwelveDataClient struct {
 	host   string
 }
 
-func NewTwelveDataClient() *TwelveDataClient {
+func NewTwelveDataClient(apiKey string, apiHost string, clientTimout time.Duration) *TwelveDataClient {
 	return &TwelveDataClient{
 		c: &http.Client{
-			Timeout:   config.Conf.API.TwelveData.Timeout,
+			Timeout:   clientTimout,
 			Transport: NewRequestLoggingTransport(http.DefaultTransport),
 		},
-		apiKey: config.Conf.API.TwelveData.ApiKey,
-		host:   config.Conf.API.TwelveData.Host,
+		apiKey: apiKey,
+		host:   apiHost,
 	}
 }
 
@@ -35,12 +38,16 @@ func (c *TwelveDataClient) getUrl(resource string, params *url.Values) string {
 	return result
 }
 
-func (c *TwelveDataClient) GetHistoricDataForSymbol(symbol string) (*TimeSeries, error) {
+func (c *TwelveDataClient) GetHistoricDataForSymbol(ctx context.Context, symbol string) (*TimeSeries, error) {
 	params := url.Values{}
 	params.Add("apikey", c.apiKey)
 	params.Add("symbol", symbol)
 	params.Add("interval", "1day")
-	response, err := c.c.Get(c.getUrl("time_series", &params))
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.getUrl("time_series", &params), nil)
+	if err != nil {
+		return nil, err
+	}
+	response, err := c.c.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -49,18 +56,27 @@ func (c *TwelveDataClient) GetHistoricDataForSymbol(symbol string) (*TimeSeries,
 		return nil, err
 	}
 	if response.StatusCode != 200 {
-		var result ErrorResponse
-		if err = json.Unmarshal(responseBody, &result); err != nil {
-			return nil, err
-		}
-		return nil, errors.New(fmt.Sprintf("error within request: %d code, message: %s", result.Code, result.Message))
+		utils.LogRequest(ctx, log.Error()).
+			Str("from", "TwelveDataClient").
+			Str("response", string(responseBody)).
+			Int("response_code", response.StatusCode).
+			Msg("Unknown status code from TwelveData API")
+		return nil, errors.New("unknown integration fail")
 	}
 	var results TimeSeries
 	if err = json.Unmarshal(responseBody, &results); err != nil {
 		return nil, err
 	}
 	if results.Status == "error" {
-		return nil, errors.New("unknown error in response: " + string(responseBody))
+		utils.LogRequest(ctx, log.Error()).
+			Str("from", "TwelveDataClient").
+			Interface("response", results).
+			Int("response_code", response.StatusCode).
+			Msg("Error received from TwelveData API")
+		if results.Code == 400 || results.Code == 404 {
+			return nil, model.SymbolNotFound
+		}
+		return nil, errors.New("unknown error in response from api")
 	}
 	return &results, nil
 }

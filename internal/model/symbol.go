@@ -1,5 +1,7 @@
 package model
 
+import "errors"
+
 type Symbol struct {
 	ID            int64      `json:"-"`
 	Symbol        string     `json:"symbol,omitempty" binding:"required"`
@@ -8,6 +10,17 @@ type Symbol struct {
 	Currency      string     `json:"currency,omitempty"`
 	CurrencyBase  string     `json:"currency_base,omitempty"`
 	CurrencyQuote string     `json:"currency_quote,omitempty"`
+	Exchanges     []Exchange `json:"exchanges,omitempty"`
+	Values        []Price    `json:"values,omitempty"`
+}
+
+type UpdateSymbol struct {
+	Symbol        string     `json:"symbol,omitempty" binding:"required"`
+	Name          *string    `json:"name,omitempty"`
+	Type          *string    `json:"type,omitempty"`
+	Currency      *string    `json:"currency,omitempty"`
+	CurrencyBase  *string    `json:"currency_base,omitempty"`
+	CurrencyQuote *string    `json:"currency_quote,omitempty"`
 	Exchanges     []Exchange `json:"exchanges,omitempty"`
 	Values        []Price    `json:"values,omitempty"`
 }
@@ -28,3 +41,5 @@ type Price struct {
 	Close  string `json:"close,omitempty"`
 	Volume string `json:"volume,omitempty"`
 }
+
+var SymbolNotFound = errors.New("symbol not found")

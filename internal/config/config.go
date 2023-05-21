@@ -1,8 +1,8 @@
 package config
 
 import (
-	"FinanceApi/pkg/log"
 	"github.com/ilyakaznacheev/cleanenv"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,9 +29,11 @@ type Config struct {
 		Path  string `yaml:"path" env:"LOGS_PATH" env-default:"logs.txt"`
 	} `yaml:"logs"`
 	Server struct {
-		Port            string `yaml:"port" env:"SERVER_PORT" env-default:"8080"`
-		ReadTimeoutSec  int    `yaml:"readTimeoutSec" env:"SERVER_READ_TIMEOUT" env-default:"10"`
-		WriteTimeoutSec int    `yaml:"writeTimeoutSec" env:"SERVER_WRITE_TIMEOUT" env-default:"10"`
+		Prefork      bool          `yaml:"prefork" env:"SERVER_PREFORK" env-default:"false"`
+		Environment  string        `yaml:"environment" env:"SERVER_ENV" env-default:"Dev"`
+		Port         string        `yaml:"port" env:"SERVER_PORT" env-default:"8080"`
+		ReadTimeout  time.Duration `yaml:"readTimeout" env:"SERVER_READ_TIMEOUT" env-default:"10s"`
+		WriteTimeout time.Duration `yaml:"writeTimeout" env:"SERVER_WRITE_TIMEOUT" env-default:"10s"`
 	} `yaml:"server"`
 	Cache struct {
 		SymbolTTL time.Duration `yaml:"symbolTtl" env:"CACHE_SYMBOL_TTL" env-default:"1h"`
@@ -43,10 +45,10 @@ var Conf Config
 func Init() {
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Panic("Couldn't open current working directory!", err)
+		log.Fatal("Couldn't open current working directory!", err)
 	}
-	err = cleanenv.ReadConfig(filepath.Join(wd, "config.yaml"), &Conf)
+	err = cleanenv.ReadConfig(filepath.Join(wd, "config/config.yaml"), &Conf)
 	if err != nil {
-		log.Panic("Error on reading config!", err)
+		log.Fatal("Error on reading config!", err)
 	}
 }
