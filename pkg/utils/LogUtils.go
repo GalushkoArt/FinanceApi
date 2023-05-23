@@ -17,7 +17,7 @@ func LogRequest(c context.Context, e *zerolog.Event) *zerolog.Event {
 		return nil
 	}
 	if id, ok := c.Value("requestid").(string); ok {
-		return e.Str("requestid", id)
+		return e.Str("request-id", id)
 	}
 	return e
 }

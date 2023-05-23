@@ -1,25 +1,43 @@
 package handler
 
 import (
+	"FinanceApi/internal/model"
 	"FinanceApi/pkg/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 )
 
-type Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+type CommonResponse struct {
+	Code       int                `json:"code"`
+	Message    string             `json:"message"`
+	AuthErrors []*model.AuthError `json:"authErrors,omitempty"`
 }
 
-func warnErrorResponse(c *fiber.Ctx, err error, statusCode int, message string) error {
-	shLog.Warn().Stack().Str("request-id", utils.GetRequestId(c.Context())).Err(err).Msg(message)
-	return returnError(c, statusCode, message)
+func errorErrorResponse(c *fiber.Ctx, logger *zerolog.Logger, err error, statusCode int, message string, authErrors ...[]*model.AuthError) error {
+	utils.LogRequest(c.Context(), logger.Error()).Stack().Err(err).Msg(message)
+	return returnError(c, statusCode, message, authErrors...)
 }
 
-func infoErrorResponse(c *fiber.Ctx, err error, statusCode int, message string) error {
-	shLog.Info().Stack().Str("request-id", utils.GetRequestId(c.Context())).Err(err).Msg(message)
-	return returnError(c, statusCode, message)
+func warnErrorResponse(c *fiber.Ctx, logger *zerolog.Logger, err error, statusCode int, message string, authErrors ...[]*model.AuthError) error {
+	utils.LogRequest(c.Context(), logger.Warn()).Stack().Err(err).Msg(message)
+	return returnError(c, statusCode, message, authErrors...)
 }
 
-func returnError(c *fiber.Ctx, statusCode int, message string) error {
-	return c.Status(statusCode).JSON(Error{Code: statusCode, Message: message})
+func infoErrorResponse(c *fiber.Ctx, logger *zerolog.Logger, err error, statusCode int, message string, authErrors ...[]*model.AuthError) error {
+	utils.LogRequest(c.Context(), logger.Info()).Err(err).Msg(message)
+	return returnError(c, statusCode, message, authErrors...)
+}
+
+func returnError(c *fiber.Ctx, statusCode int, message string, authErrors ...[]*model.AuthError) error {
+	if len(authErrors) > 0 {
+		return c.Status(statusCode).JSON(CommonResponse{Code: statusCode, Message: message, AuthErrors: authErrors[0]})
+	}
+	return c.Status(statusCode).JSON(CommonResponse{Code: statusCode, Message: message})
+}
+
+func adminOnlyEndpoint(c *fiber.Ctx) error {
+	if c.Locals("role") != model.AdminRole {
+		return c.Status(fiber.StatusUnauthorized).JSON(CommonResponse{Code: fiber.StatusUnauthorized, Message: "you don't have permissions for this endpoint"})
+	}
+	return nil
 }

@@ -11,31 +11,53 @@ import (
 )
 
 type Handler struct {
-	sh symbolHandler
+	ah            authHandler
+	sh            symbolHandler
+	apiMiddleware []fiber.Handler
 }
 
-func New(symbolService service.SymbolService, symbolCache simpleCache.GenericCache[model.Symbol]) *Handler {
+func New(
+	authService service.AuthService,
+	symbolService service.SymbolService,
+	symbolCache simpleCache.GenericCache[model.Symbol],
+	apiMiddleware ...fiber.Handler,
+) *Handler {
+	ahLog = log.With().Str("from", "authHandler").Logger()
 	shLog = log.With().Str("from", "symbolHandler").Logger()
-	return &Handler{sh: symbolHandler{
-		service: symbolService,
-		cache:   symbolCache,
-	}}
+	return &Handler{
+		ah: authHandler{
+			service: authService,
+		},
+		sh: symbolHandler{
+			service: symbolService,
+			cache:   symbolCache,
+		},
+		apiMiddleware: apiMiddleware,
+	}
 }
 
 func (h *Handler) InitRoutes(app *fiber.App) {
 	app.Get("/swagger/*", swagger.HandlerDefault)
+	auth := app.Group("/auth")
+	{
+		auth.Post("/signup", h.ah.SignUp)
+		auth.Post("/signin", h.ah.SignIn)
+		auth.Get("/refresh", h.ah.Refresh)
+	}
 	api := app.Group("/api")
 	{
-		api.Use(RequestLogger())
+		for _, middleware := range h.apiMiddleware {
+			api.Use(middleware)
+		}
 		v1 := api.Group("/v1")
 		{
 			symbols := v1.Group("/symbols")
 			{
-				symbols.Get("", h.sh.getSymbols)
-				symbols.Post("", h.sh.addSymbol)
-				symbols.Put("", h.sh.updateSymbol)
-				symbols.Get("/:symbol", h.sh.getSymbol)
-				symbols.Delete("/:symbol", h.sh.deleteSymbol)
+				symbols.Get("", h.sh.GetSymbols)
+				symbols.Post("", h.sh.AddSymbol)
+				symbols.Put("", h.sh.UpdateSymbol)
+				symbols.Get("/:symbol", h.sh.GetSymbol)
+				symbols.Delete("/:symbol", h.sh.DeleteSymbol)
 			}
 		}
 	}

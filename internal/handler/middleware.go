@@ -1,24 +1,28 @@
 package handler
 
 import (
+	"FinanceApi/internal/service"
 	"FinanceApi/pkg/utils"
+	"errors"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"strings"
 	"time"
 )
 
-type Config struct {
+type LogConfig struct {
 	Logger *zerolog.Logger
 	Next   func(c *fiber.Ctx) bool
 }
 
-func RequestLogger(confs ...Config) fiber.Handler {
+func RequestLogger(logConf ...LogConfig) fiber.Handler {
 	var logger zerolog.Logger
-	var conf Config
-	if len(confs) > 0 {
-		logger = *confs[0].Logger
-		conf = confs[0]
+	var conf LogConfig
+	if len(logConf) > 0 {
+		logger = *logConf[0].Logger
+		conf = logConf[0]
 	} else {
 		logger = log.Logger
 	}
@@ -55,4 +59,55 @@ func RequestLogger(confs ...Config) fiber.Handler {
 		}
 		return err
 	}
+}
+
+type AuthConfig struct {
+	Next func(c *fiber.Ctx) bool
+}
+
+func AuthMiddleware(parser *service.JwtParser, authConf ...AuthConfig) fiber.Handler {
+	var conf AuthConfig
+	if len(authConf) != 0 {
+		conf = authConf[0]
+	}
+	return func(c *fiber.Ctx) error {
+		if conf.Next != nil && conf.Next(c) {
+			return c.Next()
+		}
+		tokenString, err := getTokenFromRequest(c)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(CommonResponse{Code: fiber.StatusUnauthorized, Message: err.Error()})
+		}
+		userId, role, err := parser.ParseToken(tokenString)
+		if err != nil {
+			if err == jwt.ErrHashUnavailable {
+				return c.SendStatus(fiber.StatusInternalServerError)
+			}
+			return c.Status(fiber.StatusUnauthorized).JSON(CommonResponse{Code: fiber.StatusUnauthorized, Message: err.Error()})
+		}
+		log.Info().
+			Str("request-id", utils.GetRequestId(c.Context())).
+			Str("from", "authMiddleware").
+			Msgf("request from %s with %s id", role, userId)
+		c.Locals("role", role)
+		return c.Next()
+	}
+}
+
+func getTokenFromRequest(c *fiber.Ctx) (string, error) {
+	authHeader := c.GetReqHeaders()["Authorization"]
+	if authHeader == "" {
+		return "", errors.New("empty auth header")
+	}
+
+	headerParts := strings.Split(authHeader, " ")
+	if len(headerParts) != 2 || headerParts[0] != "Bearer" {
+		return "", errors.New("invalid auth header")
+	}
+
+	if len(headerParts[1]) == 0 {
+		return "", errors.New("token is empty")
+	}
+
+	return headerParts[1], nil
 }
