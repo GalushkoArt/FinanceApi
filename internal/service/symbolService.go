@@ -19,27 +19,31 @@ type SymbolService interface {
 }
 
 type symbolServiceWithRepoAndClient struct {
-	repo repository.SymbolRepository
-	pool *connectionPool.ConnectionPool
+	repo         repository.SymbolRepository
+	pool         *connectionPool.ConnectionPool
+	auditService AuditService
 }
 
 func ssLog(c context.Context, e *zerolog.Event) *zerolog.Event {
 	return utils.LogRequest(c, e).Str("from", "symbolServiceWithRepoAndClient")
 }
 
-func NewSymbolService(repo repository.SymbolRepository, pool *connectionPool.ConnectionPool) SymbolService {
-	return &symbolServiceWithRepoAndClient{repo: repo, pool: pool}
+func NewSymbolService(repo repository.SymbolRepository, pool *connectionPool.ConnectionPool, auditService AuditService) SymbolService {
+	return &symbolServiceWithRepoAndClient{repo: repo, pool: pool, auditService: auditService}
 }
 
 func (s *symbolServiceWithRepoAndClient) Add(ctx context.Context, symbol model.Symbol) error {
+	go s.auditService.LogSymbolCreated(ctx, symbol.Symbol)
 	return s.repo.Add(ctx, symbol)
 }
 
 func (s *symbolServiceWithRepoAndClient) Update(ctx context.Context, symbol model.UpdateSymbol) error {
+	go s.auditService.LogSymbolUpdated(ctx, symbol.Symbol)
 	return s.repo.Update(ctx, symbol)
 }
 
 func (s *symbolServiceWithRepoAndClient) Delete(ctx context.Context, symbolName string) error {
+	go s.auditService.LogSymbolDeleted(ctx, symbolName)
 	return s.repo.Delete(ctx, symbolName)
 }
 

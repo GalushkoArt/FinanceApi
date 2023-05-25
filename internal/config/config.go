@@ -44,6 +44,13 @@ type Config struct {
 		ExpiryTimeout      time.Duration `yaml:"expiry_timeout" env:"JWT_EXPIRY_TIMEOUT" env-default:"15m"`
 		RefreshTimeoutDays int           `yaml:"refresh_timeout_days" env:"JWT_REFRESH_TIMEOUT_DAYS" env-default:"30"`
 	} `yaml:"jwt"`
+	Audit struct {
+		GRPCEnabled bool   `yaml:"grpc_enabled" env:"AUDIT_GRPC_ENABLED" env-default:"false"`
+		GRPCAddress string `yaml:"grpc_address" env:"AUDIT_GRPC_ADDRESS" env-default:"localhost:50051"`
+		MQEnabled   bool   `yaml:"mq_enabled" env:"AUDIT_MQ_ENABLED" env-default:"false"`
+		MQUri       string `yaml:"mq_uri" env:"AUDIT_MQ_URI"`
+		QueueName   string `yaml:"queue_name" env:"AUDIT_QUEUE_NAME" env-default:"audit"`
+	} `yaml:"audit"`
 }
 
 var Conf Config

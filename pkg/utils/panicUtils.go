@@ -1,7 +1,9 @@
 package utils
 
+import "github.com/rs/zerolog/log"
+
 func PanicOnError(err error) {
 	if err != nil {
-		panic(err)
+		log.Panic().Err(err)
 	}
 }

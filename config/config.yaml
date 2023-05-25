@@ -22,3 +22,8 @@ cache:
 jwt:
   expiry_timeout: "15m"
   refresh_timeout_days: 30
+audit:
+  grpc_enabled: true
+  grpc_address: "localhost:50051"
+  mq_enabled: true
+  queue_name: "audit"
