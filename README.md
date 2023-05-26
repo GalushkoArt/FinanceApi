@@ -9,6 +9,8 @@ Simple REST API Finance Server
 - SimpleCache
 - Swagger
 - JWT
+- RabbitMQ 3.11.16
+- gRPC
 
 **Reference data**: TwelveData
 
@@ -34,10 +36,9 @@ Simple REST API Finance Server
 
 ## Before run:
 
-1. Set database configs
-2. Set TwelveData API key
-3. Set DB password salt
-4. Set JWT HMAC secret
+1. Check and set up your configs in [config file](config/config.yaml)
+2. Set up your secrets: DB Password, Twelve Data API key, salt for users passwords, jwt secret and RabbitMQ connection
+   string. You can check [example.env](example.env)
 
 ## To run:
 

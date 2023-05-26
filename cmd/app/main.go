@@ -8,6 +8,8 @@ import (
 	"FinanceApi/internal/repository"
 	"FinanceApi/internal/service"
 	"FinanceApi/pkg/connectionPool"
+	pkg "FinanceApi/pkg/service"
+	"FinanceApi/pkg/utils"
 	"fmt"
 	"github.com/GalushkoArt/simpleCache"
 	"github.com/goccy/go-json"
@@ -16,6 +18,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -39,18 +43,23 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err)
 	}
-	defer closeDb(db)
 	symbolRepository := repository.NewSymbolRepository(db)
 	userRepository := repository.NewUserRepository(db)
 	twelveDataConf := config.Conf.API.TwelveData
 	twelveDataPool := connectionPool.NewTwelveDataPool(twelveDataConf.ApiKey, twelveDataConf.Host, twelveDataConf.Timeout, twelveDataConf.RateLimit)
-	symbolService := service.NewSymbolService(symbolRepository, twelveDataPool)
+	auditConf := config.Conf.Audit
+	auditClient, err := pkg.NewAuditClient(auditConf.GRPCEnabled, auditConf.GRPCAddress)
+	utils.PanicOnError(err)
+	auditPublisher := pkg.NewAuditPublisher(auditConf.QueueName)
+	closeMq := auditPublisher.InitPublishChannel(auditConf.MQEnabled, auditConf.MQUri)
+	auditService := service.NewAuditService(auditConf.GRPCEnabled, auditClient, auditConf.MQEnabled, auditPublisher)
+	symbolService := service.NewSymbolService(symbolRepository, twelveDataPool, auditService)
 	symbolCache := simpleCache.NewGenericConcurrentCache[model.Symbol](config.Conf.Cache.SymbolTTL)
 	hasher := service.NewHasher(dbConf.Salt)
 	jwtConf := config.Conf.JWT
 	jwtProducer := service.NewJwtProducer(jwtConf.HMACSecret, jwtConf.ExpiryTimeout)
 	jwtParser := service.NewJwtParser(jwtConf.HMACSecret)
-	authService := service.NewAuthService(userRepository, hasher, jwtProducer, time.Duration(jwtConf.RefreshTimeoutDays)*24*time.Hour)
+	authService := service.NewAuthService(userRepository, hasher, jwtProducer, time.Duration(jwtConf.RefreshTimeoutDays)*24*time.Hour, auditService)
 
 	app := fiber.New(fiber.Config{
 		JSONEncoder:  json.Marshal,
@@ -64,8 +73,38 @@ func main() {
 	app.Use(requestid.New())
 	httpHandler := handler.New(authService, symbolService, symbolCache, handler.RequestLogger(), handler.AuthMiddleware(jwtParser))
 	httpHandler.InitRoutes(app)
+
+	exit := make(chan os.Signal, 1)
+	signal.Notify(exit, os.Interrupt, os.Kill)
+	serverShutdown := make(chan struct{})
+	go func() {
+		<-exit
+		fmt.Println("Gracefully shutting down...")
+		_ = app.Shutdown()
+		serverShutdown <- struct{}{}
+	}()
+
 	log.Info().Msg("Starting server")
-	log.Fatal().Err(app.Listen(":" + config.Conf.Server.Port)).Msg("Error on running server!")
+	if err := app.Listen(":" + config.Conf.Server.Port); err != nil {
+		log.Fatal().Err(err).Msg("Error on running server!")
+	}
+
+	<-serverShutdown
+	done := make(chan bool)
+
+	go func() {
+		utils.PanicOnError(auditClient.Close())
+		closeMq()
+		closeDb(db)
+		done <- true
+	}()
+	select {
+	case <-time.After(30 * time.Second):
+		log.Error().Msg("Failed to shutdown in 30 seconds")
+		os.Exit(1)
+	case <-done:
+		log.Info().Msg("Shutdown successfully")
+	}
 }
 
 func closeDb(db *sqlx.DB) {

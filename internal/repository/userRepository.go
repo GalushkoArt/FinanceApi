@@ -4,7 +4,6 @@ import (
 	"FinanceApi/internal/model"
 	"FinanceApi/pkg/utils"
 	"context"
-	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -32,8 +31,6 @@ func NewUserRepository(db *sqlx.DB) UserRepository {
 	return &userRepositoryPostgres{db: db}
 }
 
-const logInsert = `INSERT INTO LOGS(EVENT) VALUES ($1)`
-
 func (r *userRepositoryPostgres) Create(ctx context.Context, user model.User) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -56,13 +53,7 @@ func (r *userRepositoryPostgres) Create(ctx context.Context, user model.User) er
 		utils.PanicOnError(tx.Rollback())
 		return err
 	}
-	urLog(ctx, log.Debug()).Msg("User created! Write logs to DB")
-	_, err = tx.Exec(logInsert, fmt.Sprintf("Created user with %s id, %s username, %s email", user.ID, user.Username, user.Email))
-	if err != nil {
-		urLog(ctx, log.Error()).Err(err).Msg("Fail on insert logs!")
-		utils.PanicOnError(tx.Rollback())
-		return err
-	}
+	urLog(ctx, log.Debug()).Msg("User created!")
 	return tx.Commit()
 }
 
@@ -126,13 +117,7 @@ func (r *userRepositoryPostgres) Update(ctx context.Context, user model.User) er
 		utils.PanicOnError(tx.Rollback())
 		return err
 	}
-	urLog(ctx, log.Debug()).Msg("User updated! Write logs to DB")
-	_, err = tx.Exec(logInsert, fmt.Sprintf("Update user with %s id, %s username, %s email", user.ID, user.Username, user.Email))
-	if err != nil {
-		urLog(ctx, log.Error()).Err(err).Msg("Fail on insert logs!")
-		utils.PanicOnError(tx.Rollback())
-		return err
-	}
+	urLog(ctx, log.Debug()).Msg("User updated!")
 	return tx.Commit()
 }
 

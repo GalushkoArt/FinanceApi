@@ -27,6 +27,7 @@ func NewTwelveDataPool(apiKey string, apiHost string, clientTimout time.Duration
 		wg:                  sync.WaitGroup{},
 	}
 	pool.init()
+	log.Info().Msgf("Connection pool initialized with %d connections", connectionNumber)
 	return pool
 }
 
@@ -37,7 +38,7 @@ func (p *ConnectionPool) init() {
 	}
 }
 
-func (p *ConnectionPool) stop() {
+func (p *ConnectionPool) Stop() {
 	p.stopped = true
 	p.wg.Wait()
 }

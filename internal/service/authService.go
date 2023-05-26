@@ -16,6 +16,7 @@ type authService struct {
 	hasher              *Hasher
 	jwtProducer         *JwtProducer
 	refreshTokenTimeout time.Duration
+	auditService        AuditService
 }
 
 type AuthService interface {
@@ -24,8 +25,8 @@ type AuthService interface {
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, time.Time, error)
 }
 
-func NewAuthService(repo repository.UserRepository, hasher *Hasher, jwtProducer *JwtProducer, refreshTokenTimeout time.Duration) AuthService {
-	return &authService{hasher: hasher, repo: repo, jwtProducer: jwtProducer, refreshTokenTimeout: refreshTokenTimeout}
+func NewAuthService(repo repository.UserRepository, hasher *Hasher, jwtProducer *JwtProducer, refreshTokenTimeout time.Duration, auditService AuditService) AuthService {
+	return &authService{hasher: hasher, repo: repo, jwtProducer: jwtProducer, refreshTokenTimeout: refreshTokenTimeout, auditService: auditService}
 }
 
 var UserAlreadyExists = errors.New("user is already exists")
@@ -42,6 +43,7 @@ func (s *authService) SignUp(ctx context.Context, signUp model.SignUp) error {
 	if err != nil {
 		return err
 	}
+	go s.auditService.LogUserSignUp(ctx, id.String())
 	passHash, err := s.hasher.Hash(signUp.Password)
 	if err != nil {
 		return err
@@ -58,6 +60,7 @@ func (s *authService) SignIn(ctx context.Context, signIn model.SignIn) (string, 
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
+	go s.auditService.LogUserSignIn(ctx, user.ID)
 	return s.getTokens(ctx, user.ID, model.ClientRole)
 }
 
@@ -86,6 +89,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (st
 	if token.ExpiresAt.Before(time.Now()) {
 		return "", "", time.Time{}, model.TokenExpired
 	}
+	go s.auditService.LogUserRefreshToken(ctx, token.UserId)
 	role, err := s.repo.GetUserRole(ctx, token.UserId)
 	if err != nil {
 		return "", "", time.Time{}, err
