@@ -1,8 +1,8 @@
-package connectionPool
+package conpool
 
 import (
-	"FinanceApi/pkg/apiClient"
 	"context"
+	"github.com/galushkoart/finance-api/pkg/apiclient"
 	"github.com/rs/zerolog/log"
 	"sync"
 	"time"
@@ -10,21 +10,22 @@ import (
 
 type ConnectionPool struct {
 	numberOfConnections int
-	client              *apiClient.TwelveDataClient
+	client              apiclient.TwelveDataClient
 	wg                  sync.WaitGroup
-	connections         chan connection
-	stopped             bool
+	connections         chan *connection
+	restoreTime         time.Duration
 }
 
 type connection struct {
 	id int
 }
 
-func NewTwelveDataPool(apiKey string, apiHost string, clientTimout time.Duration, connectionNumber int) *ConnectionPool {
+func NewTwelveDataPool(apiKey string, apiHost string, clientTimout time.Duration, connectionNumber int, restoreTime time.Duration) *ConnectionPool {
 	pool := &ConnectionPool{
 		numberOfConnections: connectionNumber,
-		client:              apiClient.NewTwelveDataClient(apiKey, apiHost, clientTimout),
+		client:              apiclient.NewTwelveDataClient(apiKey, apiHost, clientTimout),
 		wg:                  sync.WaitGroup{},
+		restoreTime:         restoreTime,
 	}
 	pool.init()
 	log.Info().Msgf("Connection pool initialized with %d connections", connectionNumber)
@@ -32,18 +33,17 @@ func NewTwelveDataPool(apiKey string, apiHost string, clientTimout time.Duration
 }
 
 func (p *ConnectionPool) init() {
-	p.connections = make(chan connection, p.numberOfConnections)
+	p.connections = make(chan *connection, p.numberOfConnections)
 	for i := 0; i < p.numberOfConnections; i++ {
-		p.connections <- connection{i + 1}
+		p.connections <- &connection{i + 1}
 	}
 }
 
 func (p *ConnectionPool) Stop() {
-	p.stopped = true
 	p.wg.Wait()
 }
 
-func (p *ConnectionPool) GetHistoricDataForSymbol(ctx context.Context, symbol string) (*apiClient.TimeSeries, error) {
+func (p *ConnectionPool) GetHistoricDataForSymbol(ctx context.Context, symbol string) (*apiclient.TimeSeries, error) {
 	con := <-p.connections
 	p.wg.Add(1)
 	result, err := p.client.GetHistoricDataForSymbol(ctx, symbol)
@@ -52,8 +52,8 @@ func (p *ConnectionPool) GetHistoricDataForSymbol(ctx context.Context, symbol st
 	return result, err
 }
 
-func (p *ConnectionPool) restoreConnection(c connection) {
-	time.Sleep(1 * time.Minute)
+func (p *ConnectionPool) restoreConnection(c *connection) {
+	time.Sleep(p.restoreTime)
 	p.connections <- c
 	log.Info().Msgf("Connection #%d restored", c.id)
 }

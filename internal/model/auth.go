@@ -45,12 +45,12 @@ type AuthError struct {
 var validate = validator.New()
 
 func Validate[T SignIn | SignUp](action T) []*AuthError {
-	var authErrors []*AuthError
+	authErrors := make([]*AuthError, 0)
 	err := validate.Struct(action)
 	if err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
 			var element AuthError
-			element.Field = err.StructNamespace()
+			element.Field = err.Field()
 			element.Rule = err.Tag()
 			authErrors = append(authErrors, &element)
 		}

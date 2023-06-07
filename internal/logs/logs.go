@@ -1,7 +1,7 @@
 package logs
 
 import (
-	"FinanceApi/pkg/utils"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"

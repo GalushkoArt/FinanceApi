@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/internal/service"
 	"errors"
 	"fmt"
 	"github.com/GalushkoArt/simpleCache"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"strings"
@@ -45,7 +45,7 @@ func (h *symbolHandler) infoErrorResponse(c *fiber.Ctx, err error, statusCode in
 func (h *symbolHandler) GetSymbols(c *fiber.Ctx) error {
 	symbols, err := h.service.GetAll(c.Context())
 	if err != nil {
-		return h.warnErrorResponse(c, err, fiber.StatusNotFound, "CommonResponse on retrieving all books")
+		return h.warnErrorResponse(c, err, fiber.StatusNotFound, "CommonResponse on retrieving all symbols")
 	}
 	return c.Status(fiber.StatusOK).JSON(symbols)
 }
@@ -65,9 +65,6 @@ func (h *symbolHandler) GetSymbols(c *fiber.Ctx) error {
 //	@Router			/api/v1/symbols/{symbol} [get]
 func (h *symbolHandler) GetSymbol(c *fiber.Ctx) error {
 	symbol := strings.Replace(c.Params("symbol"), "-", "/", 1)
-	if len(symbol) == 0 {
-		return h.infoErrorResponse(c, errors.New("symbol is empty"), fiber.StatusBadRequest, "Symbol must not be empty")
-	}
 	cached := h.cache.Get(symbol)
 	if cached != nil {
 		shLog.Debug().Msgf("Return %s symbol from cache", symbol)
@@ -97,13 +94,7 @@ func (h *symbolHandler) GetSymbol(c *fiber.Ctx) error {
 //	@Failure		500		{object}	CommonResponse	"Internal server errors"
 //	@Router			/api/v1/symbols/{symbol} [delete]
 func (h *symbolHandler) DeleteSymbol(c *fiber.Ctx) error {
-	if err := adminOnlyEndpoint(c); err != nil {
-		return err
-	}
 	symbol := strings.Replace(c.Params("symbol"), "-", "/", 1)
-	if len(symbol) == 0 {
-		return h.infoErrorResponse(c, errors.New("symbol is empty"), fiber.StatusBadRequest, "Symbol must not be empty")
-	}
 	if err := h.service.Delete(c.Context(), symbol); err != nil {
 		if err == model.SymbolNotFound {
 			return h.infoErrorResponse(c, err, fiber.StatusNotFound, err.Error())
@@ -130,12 +121,9 @@ func (h *symbolHandler) DeleteSymbol(c *fiber.Ctx) error {
 //	@Failure		500		{object}	CommonResponse	"Internal server errors"
 //	@Router			/api/v1/symbols [post]
 func (h *symbolHandler) AddSymbol(c *fiber.Ctx) error {
-	if err := adminOnlyEndpoint(c); err != nil {
-		return err
-	}
 	var symbol model.Symbol
 	if err := c.BodyParser(&symbol); err != nil {
-		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong body")
+		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong content type")
 	}
 	if err := h.service.Add(c.Context(), symbol); err != nil {
 		return h.warnErrorResponse(c, err, fiber.StatusInternalServerError, fmt.Sprintf("Failed to add %s symbol", symbol.Symbol))
@@ -159,12 +147,9 @@ func (h *symbolHandler) AddSymbol(c *fiber.Ctx) error {
 //	@Failure		500		{object}	CommonResponse		"Internal server errors"
 //	@Router			/api/v1/symbols [put]
 func (h *symbolHandler) UpdateSymbol(c *fiber.Ctx) error {
-	if err := adminOnlyEndpoint(c); err != nil {
-		return err
-	}
 	var symbol model.UpdateSymbol
 	if err := c.BodyParser(&symbol); err != nil {
-		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong body")
+		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong content type")
 	}
 	if err := h.service.Update(c.Context(), symbol); err != nil {
 		return h.warnErrorResponse(c, err, fiber.StatusInternalServerError, fmt.Sprintf("Failed to update %s symbol", symbol.Symbol))

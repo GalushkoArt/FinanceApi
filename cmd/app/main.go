@@ -1,20 +1,21 @@
 package main
 
 import (
-	"FinanceApi/internal/config"
-	"FinanceApi/internal/handler"
-	"FinanceApi/internal/logs"
-	"FinanceApi/internal/model"
-	"FinanceApi/internal/repository"
-	"FinanceApi/internal/service"
-	"FinanceApi/pkg/connectionPool"
-	pkg "FinanceApi/pkg/service"
-	"FinanceApi/pkg/utils"
 	"fmt"
 	"github.com/GalushkoArt/simpleCache"
+	"github.com/galushkoart/finance-api/internal/config"
+	"github.com/galushkoart/finance-api/internal/handler"
+	"github.com/galushkoart/finance-api/internal/logs"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/repository"
+	"github.com/galushkoart/finance-api/internal/service"
+	"github.com/galushkoart/finance-api/pkg/conpool"
+	pkg "github.com/galushkoart/finance-api/pkg/service"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/swagger"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
@@ -46,7 +47,7 @@ func main() {
 	symbolRepository := repository.NewSymbolRepository(db)
 	userRepository := repository.NewUserRepository(db)
 	twelveDataConf := config.Conf.API.TwelveData
-	twelveDataPool := connectionPool.NewTwelveDataPool(twelveDataConf.ApiKey, twelveDataConf.Host, twelveDataConf.Timeout, twelveDataConf.RateLimit)
+	twelveDataPool := conpool.NewTwelveDataPool(twelveDataConf.ApiKey, twelveDataConf.Host, twelveDataConf.Timeout, twelveDataConf.RateLimit, 1*time.Minute)
 	auditConf := config.Conf.Audit
 	auditClient, err := pkg.NewAuditClient(auditConf.GRPCEnabled, auditConf.GRPCAddress)
 	utils.PanicOnError(err)
@@ -71,7 +72,7 @@ func main() {
 		AppName:      "Finance App " + config.Conf.Server.Environment,
 	})
 	app.Use(requestid.New())
-	httpHandler := handler.New(authService, symbolService, symbolCache, handler.RequestLogger(), handler.AuthMiddleware(jwtParser))
+	httpHandler := handler.New(swagger.HandlerDefault, authService, symbolService, symbolCache, handler.RequestLogger(), handler.AuthMiddleware(jwtParser))
 	httpHandler.InitRoutes(app)
 
 	exit := make(chan os.Signal, 1)
@@ -94,7 +95,7 @@ func main() {
 
 	go func() {
 		utils.PanicOnError(auditClient.Close())
-		closeMq()
+		utils.PanicOnError(closeMq())
 		closeDb(db)
 		done <- true
 	}()
