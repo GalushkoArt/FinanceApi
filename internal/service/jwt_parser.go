@@ -1,9 +1,9 @@
 package service
 
 import (
-	"FinanceApi/internal/model"
 	"errors"
 	"fmt"
+	"github.com/galushkoart/finance-api/internal/model"
 	"github.com/golang-jwt/jwt/v5"
 )
 

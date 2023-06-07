@@ -1,22 +1,23 @@
 package handler
 
 import (
-	_ "FinanceApi/docs"
-	"FinanceApi/internal/model"
-	"FinanceApi/internal/service"
 	"github.com/GalushkoArt/simpleCache"
+	_ "github.com/galushkoart/finance-api/docs"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/service"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/swagger"
 	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
-	ah            authHandler
-	sh            symbolHandler
-	apiMiddleware []fiber.Handler
+	swaggerHandler fiber.Handler
+	ah             authHandler
+	sh             symbolHandler
+	apiMiddleware  []fiber.Handler
 }
 
 func New(
+	swaggerHandler fiber.Handler,
 	authService service.AuthService,
 	symbolService service.SymbolService,
 	symbolCache simpleCache.GenericCache[model.Symbol],
@@ -25,6 +26,7 @@ func New(
 	ahLog = log.With().Str("from", "authHandler").Logger()
 	shLog = log.With().Str("from", "symbolHandler").Logger()
 	return &Handler{
+		swaggerHandler: swaggerHandler,
 		ah: authHandler{
 			service: authService,
 		},
@@ -37,7 +39,7 @@ func New(
 }
 
 func (h *Handler) InitRoutes(app *fiber.App) {
-	app.Get("/swagger/*", swagger.HandlerDefault)
+	app.Get("/swagger/*", h.swaggerHandler)
 	auth := app.Group("/auth")
 	{
 		auth.Post("/signup", h.ah.SignUp)
@@ -54,11 +56,18 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 			symbols := v1.Group("/symbols")
 			{
 				symbols.Get("", h.sh.GetSymbols)
-				symbols.Post("", h.sh.AddSymbol)
-				symbols.Put("", h.sh.UpdateSymbol)
+				symbols.Post("", AdminOnly, h.sh.AddSymbol)
+				symbols.Put("", AdminOnly, h.sh.UpdateSymbol)
 				symbols.Get("/:symbol", h.sh.GetSymbol)
-				symbols.Delete("/:symbol", h.sh.DeleteSymbol)
+				symbols.Delete("/:symbol", AdminOnly, h.sh.DeleteSymbol)
 			}
 		}
 	}
+}
+
+func setupFiberTest(handler *Handler, middleware ...func(c *fiber.Ctx) error) *fiber.App {
+	app := fiber.New()
+	handler.apiMiddleware = middleware
+	handler.InitRoutes(app)
+	return app
 }

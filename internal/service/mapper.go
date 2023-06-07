@@ -1,11 +1,11 @@
 package service
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/pkg/apiClient"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/pkg/apiclient"
 )
 
-func timeSeriesToModel(timeSeries apiClient.TimeSeries) model.Symbol {
+func timeSeriesToModel(timeSeries apiclient.TimeSeries) model.Symbol {
 	return model.Symbol{
 		Symbol:        timeSeries.Meta.Symbol,
 		Type:          timeSeries.Meta.Type,

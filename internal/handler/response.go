@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/pkg/utils"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
@@ -33,11 +33,4 @@ func returnError(c *fiber.Ctx, statusCode int, message string, authErrors ...[]*
 		return c.Status(statusCode).JSON(CommonResponse{Code: statusCode, Message: message, AuthErrors: authErrors[0]})
 	}
 	return c.Status(statusCode).JSON(CommonResponse{Code: statusCode, Message: message})
-}
-
-func adminOnlyEndpoint(c *fiber.Ctx) error {
-	if c.Locals("role") != model.AdminRole {
-		return c.Status(fiber.StatusUnauthorized).JSON(CommonResponse{Code: fiber.StatusUnauthorized, Message: "you don't have permissions for this endpoint"})
-	}
-	return nil
 }

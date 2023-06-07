@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/pkg/utils"
 	"context"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

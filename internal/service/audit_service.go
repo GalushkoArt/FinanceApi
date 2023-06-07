@@ -1,10 +1,10 @@
 package service
 
 import (
-	"FinanceApi/pkg/service"
-	"FinanceApi/pkg/utils"
 	"context"
 	audit "github.com/GalushkoArt/GoAuditService/pkg/proto"
+	"github.com/galushkoart/finance-api/pkg/service"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/types/known/timestamppb"

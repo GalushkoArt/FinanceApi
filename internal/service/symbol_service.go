@@ -1,11 +1,11 @@
 package service
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/internal/repository"
-	"FinanceApi/pkg/connectionPool"
-	"FinanceApi/pkg/utils"
 	"context"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/repository"
+	"github.com/galushkoart/finance-api/pkg/conpool"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -20,7 +20,7 @@ type SymbolService interface {
 
 type symbolServiceWithRepoAndClient struct {
 	repo         repository.SymbolRepository
-	pool         *connectionPool.ConnectionPool
+	pool         *conpool.ConnectionPool
 	auditService AuditService
 }
 
@@ -28,7 +28,7 @@ func ssLog(c context.Context, e *zerolog.Event) *zerolog.Event {
 	return utils.LogRequest(c, e).Str("from", "symbolServiceWithRepoAndClient")
 }
 
-func NewSymbolService(repo repository.SymbolRepository, pool *connectionPool.ConnectionPool, auditService AuditService) SymbolService {
+func NewSymbolService(repo repository.SymbolRepository, pool *conpool.ConnectionPool, auditService AuditService) SymbolService {
 	return &symbolServiceWithRepoAndClient{repo: repo, pool: pool, auditService: auditService}
 }
 
@@ -53,12 +53,14 @@ func (s *symbolServiceWithRepoAndClient) GetBySymbol(ctx context.Context, name s
 		ssLog(ctx, log.Warn()).Err(err).Msg("Couldn't fetch data from repo! Trying to get data from api")
 		timeSeries, err := s.pool.GetHistoricDataForSymbol(ctx, name)
 		if err != nil {
+			ssLog(ctx, log.Error()).Err(err).Interface("response", timeSeries).Msg("Failed to get data from api!")
 			return model.Symbol{}, err
 		}
 		symbol = timeSeriesToModel(*timeSeries)
 		err = s.repo.Add(ctx, symbol)
 		if err != nil {
 			ssLog(ctx, log.Error()).Err(err).Msgf("Couldn't save symbol!")
+			return model.Symbol{}, err
 		}
 	}
 	return symbol, nil

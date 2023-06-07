@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/internal/service"
 	"errors"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 	"strings"
@@ -45,12 +45,12 @@ const refreshTokenCookie = "refresh-token"
 func (h *authHandler) SignUp(c *fiber.Ctx) error {
 	var signUp model.SignUp
 	if err := c.BodyParser(&signUp); err != nil {
-		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong body")
+		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong content type")
 	}
 	signUp.Username = strings.ToLower(signUp.Username)
 	signUp.Email = strings.ToLower(signUp.Email)
 	authErrors := model.Validate(signUp)
-	if authErrors != nil {
+	if len(authErrors) > 0 {
 		return h.infoErrorResponse(c, errors.New("invalid sign-up body"), fiber.StatusBadRequest, "Wrong body", authErrors)
 	}
 	if err := h.service.SignUp(c.Context(), signUp); err != nil {
@@ -79,11 +79,11 @@ func (h *authHandler) SignUp(c *fiber.Ctx) error {
 func (h *authHandler) SignIn(c *fiber.Ctx) error {
 	var signIn model.SignIn
 	if err := c.BodyParser(&signIn); err != nil {
-		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong body")
+		return h.infoErrorResponse(c, err, fiber.StatusBadRequest, "Wrong content type")
 	}
 	signIn.Login = strings.ToLower(signIn.Login)
 	authErrors := model.Validate(signIn)
-	if authErrors != nil {
+	if len(authErrors) > 0 {
 		return h.infoErrorResponse(c, errors.New("invalid sign-in body"), fiber.StatusBadRequest, "Wrong body", authErrors)
 	}
 	jwtToken, refreshToken, expiryTime, err := h.service.SignIn(c.Context(), signIn)

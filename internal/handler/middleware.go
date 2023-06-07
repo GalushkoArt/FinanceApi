@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"FinanceApi/internal/service"
-	"FinanceApi/pkg/utils"
 	"errors"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/service"
+	"github.com/galushkoart/finance-api/pkg/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog"
@@ -110,4 +111,11 @@ func getTokenFromRequest(c *fiber.Ctx) (string, error) {
 	}
 
 	return headerParts[1], nil
+}
+
+func AdminOnly(c *fiber.Ctx) error {
+	if c.Locals("role") != model.AdminRole {
+		return c.Status(fiber.StatusUnauthorized).JSON(CommonResponse{Code: fiber.StatusUnauthorized, Message: "you don't have permissions for this endpoint"})
+	}
+	return c.Next()
 }

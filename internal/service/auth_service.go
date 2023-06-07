@@ -1,11 +1,11 @@
 package service
 
 import (
-	"FinanceApi/internal/model"
-	"FinanceApi/internal/repository"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/galushkoart/finance-api/internal/model"
+	"github.com/galushkoart/finance-api/internal/repository"
 	"github.com/gofrs/uuid/v5"
 	"math/rand"
 	"time"
