@@ -16,6 +16,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog/log"
@@ -40,8 +43,20 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err)
 	}
-	err = db.Ping()
+	if db.Ping() != nil {
+		log.Fatal().Err(err)
+	}
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
+		log.Fatal().Err(err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file:./db/migrations",
+		"postgres", driver)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	if err = m.Up(); err != nil {
 		log.Fatal().Err(err)
 	}
 	symbolRepository := repository.NewSymbolRepository(db)
@@ -96,6 +111,7 @@ func main() {
 	go func() {
 		utils.PanicOnError(auditClient.Close())
 		utils.PanicOnError(closeMq())
+		utils.PanicOnError(driver.Close())
 		closeDb(db)
 		done <- true
 	}()

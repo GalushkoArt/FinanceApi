@@ -23,8 +23,40 @@ type AuditPublisher interface {
 }
 
 type PublishChannel interface {
-	PublishWithContext(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+	PublishWithContext(ctx context.Context, destination string, msg proto.Message) error
 	io.Closer
+}
+
+type rabbitQueue struct {
+	publishChannel *amqp.Channel
+}
+
+func newRabbitQueue(conn *amqp.Connection) (*rabbitQueue, error) {
+	channel, err := conn.Channel()
+	return &rabbitQueue{publishChannel: channel}, err
+}
+
+func (q *rabbitQueue) PublishWithContext(ctx context.Context, destination string, msg proto.Message) error {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	return q.publishChannel.PublishWithContext(
+		ctx,
+		"",
+		destination,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        data,
+		},
+	)
+}
+
+func (q *rabbitQueue) Close() error {
+	return q.publishChannel.Close()
 }
 
 func NewAuditPublisher(queueName string) *MQAuditPublisher {
@@ -41,7 +73,7 @@ func (p *MQAuditPublisher) InitPublishChannel(enabled bool, brokerUri string) fu
 	conn, err := amqp.Dial(brokerUri)
 	utils.PanicOnError(err)
 
-	p.publishChannel, err = conn.Channel()
+	p.publishChannel, err = newRabbitQueue(conn)
 	utils.PanicOnError(err)
 	p.connection = conn
 	log.Info().Msg("Audit publisher started!")
@@ -59,23 +91,7 @@ func (p *MQAuditPublisher) Close() error {
 
 func (p *MQAuditPublisher) Publish(ctx context.Context, request *audit.LogRequest) error {
 	p.wg.Add(1)
-	data, err := proto.Marshal(request)
-	if err != nil {
-		p.wg.Done()
-		return err
-	}
-
-	err = p.publishChannel.PublishWithContext(
-		ctx,
-		"",
-		p.queueName,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        data,
-		},
-	)
+	err := p.publishChannel.PublishWithContext(ctx, p.queueName, request)
 	p.wg.Done()
 	return err
 }
