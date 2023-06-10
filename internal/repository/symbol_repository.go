@@ -90,7 +90,7 @@ func (r *symbolRepositoryPostgres) Add(ctx context.Context, newSymbol model.Symb
 		}
 	}
 	for _, price := range newSymbol.Values {
-		srLog(ctx, log.Debug()).Msgf("Inserting price %+v for %s", price, stored.Symbol)
+		srLog(ctx, log.Debug()).Msgf("Inserting price %+v for %s", price, newSymbol.Symbol)
 		const priceInsert = `INSERT INTO PRICE(SYMBOL_ID, DATE, OPEN, CLOSE, HIGH, LOW, VOLUME) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 		_, err := tx.Exec(priceInsert, stored.ID, price.Date, price.Open, price.Close, price.High, price.Low, price.Volume)
 		if err != nil {

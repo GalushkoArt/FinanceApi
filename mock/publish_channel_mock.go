@@ -10,7 +10,7 @@ import (
 
 	audit "github.com/GalushkoArt/GoAuditService/pkg/proto"
 	gomock "github.com/golang/mock/gomock"
-	amqp091 "github.com/rabbitmq/amqp091-go"
+	proto "github.com/golang/protobuf/proto"
 )
 
 // MockAuditPublisher is a mock of AuditPublisher interface.
@@ -88,15 +88,15 @@ func (mr *MockPublishChannelMockRecorder) Close() *gomock.Call {
 }
 
 // PublishWithContext mocks base method.
-func (m *MockPublishChannel) PublishWithContext(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp091.Publishing) error {
+func (m *MockPublishChannel) PublishWithContext(ctx context.Context, destination string, msg proto.Message) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishWithContext", ctx, exchange, key, mandatory, immediate, msg)
+	ret := m.ctrl.Call(m, "PublishWithContext", ctx, destination, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PublishWithContext indicates an expected call of PublishWithContext.
-func (mr *MockPublishChannelMockRecorder) PublishWithContext(ctx, exchange, key, mandatory, immediate, msg interface{}) *gomock.Call {
+func (mr *MockPublishChannelMockRecorder) PublishWithContext(ctx, destination, msg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWithContext", reflect.TypeOf((*MockPublishChannel)(nil).PublishWithContext), ctx, exchange, key, mandatory, immediate, msg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWithContext", reflect.TypeOf((*MockPublishChannel)(nil).PublishWithContext), ctx, destination, msg)
 }

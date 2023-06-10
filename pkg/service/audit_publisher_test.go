@@ -5,8 +5,6 @@ import (
 	audit "github.com/GalushkoArt/GoAuditService/pkg/proto"
 	"github.com/galushkoart/finance-api/mock"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"strconv"
 	"sync"
 	"testing"
@@ -31,16 +29,8 @@ func TestMQAuditPublisher(t *testing.T) {
 	testData := make([]*audit.LogRequest, 0, 50)
 	for i := 0; i < cap(testData); i++ {
 		request := &audit.LogRequest{RequestId: strconv.Itoa(i)}
-		protoRequest, err := proto.Marshal(request)
-		if err != nil {
-			t.Fatalf("Found unexpected error on proto marshal: %v", err)
-		}
 		testData = append(testData, request)
-		mockPublishChannel.EXPECT().PublishWithContext(gomock.Any(), "", "test", false, false,
-			amqp.Publishing{
-				ContentType: "text/plain",
-				Body:        protoRequest,
-			}).Return(nil)
+		mockPublishChannel.EXPECT().PublishWithContext(gomock.Any(), "test", request).Return(nil)
 	}
 	explicitWait := &sync.WaitGroup{}
 	for _, request := range testData {
